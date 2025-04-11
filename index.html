@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,11 +17,10 @@
     .progress-bar-filled { height: 100%; background: #28a745; width: 0%; position: absolute; top: 0; left: 0; }
     .progress-bar-initial { height: 100%; background: #6c757d; position: absolute; top: 0; left: 0; }
     .progress-text { position: absolute; width: 100%; text-align: center; line-height: 30px; color: white; font-weight: bold; }
-    .checkbox-label { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-    .checkbox-label input { width: auto; margin: 0; }
   </style>
 </head>
 <body>
+
   <div class="section">
     <h2>三戰體力恢復計算</h2>
     <label>最大體力：<input type="number" id="maxStamina" value="120"></label>
@@ -35,7 +35,9 @@
       <div class="progress-bar-filled" id="staminaProgress"></div>
       <div class="progress-text" id="staminaProgressText"></div>
     </div>
-  </div>  <div class="section">
+  </div>
+
+  <div class="section">
     <h2>士氣恢復計算</h2>
     <label>最大士氣：<input type="number" id="maxMorale" value="100"></label>
     <label>現在士氣：<input type="number" id="currentMorale"></label>
@@ -49,14 +51,66 @@
       <div class="progress-bar-filled" id="moraleProgress"></div>
       <div class="progress-text" id="moraleProgressText"></div>
     </div>
-  </div>  <div class="section">
-    <h2>通知設定</h2>
-    <label class="checkbox-label"><input type="checkbox" id="enableNotify"> 啟用瀏覽器通知</label>
-    <label class="checkbox-label"><input type="checkbox" id="enableSound"> 播放提示音效</label>
-    <label class="checkbox-label"><input type="checkbox" id="enableVibrate"> 啟用震動提醒（手機支援）</label>
-  </div><audio id="notifySound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+  </div>
 
   <script>
-    // ... 保持原有的 JS 不變 ...
-  </script></body>
+    function formatTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const hr = Math.floor(totalSec / 3600);
+      const min = Math.floor((totalSec % 3600) / 60);
+      const sec = totalSec % 60;
+      return `${hr} 小時 ${min} 分 ${sec} 秒`;
+    }
+
+    function getFinishTime(ms) {
+      const end = new Date(Date.now() + ms);
+      return `${end.getFullYear()}-${(end.getMonth()+1).toString().padStart(2, '0')}-${end.getDate().toString().padStart(2, '0')} ${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    function calculate(type, max, current, rate, resultId, countdownId, finishTimeId, barFilled, barInitial, barText) {
+      const needed = max - current;
+      const totalMs = needed * rate * 60 * 1000;
+      const startTime = Date.now();
+      const initialPercent = (current / max) * 100;
+
+      document.getElementById(resultId).textContent = `總共需要：${formatTime(totalMs)}`;
+      document.getElementById(finishTimeId).textContent = `預計完成時間：${getFinishTime(totalMs)}`;
+      document.getElementById(barInitial).style.width = `${initialPercent}%`;
+
+      const update = () => {
+        const now = Date.now();
+        const elapsed = now - startTime;
+        const remaining = Math.max(0, totalMs - elapsed);
+        const restored = Math.floor(elapsed / (rate * 60 * 1000));
+        const currentValue = Math.min(current + restored, max);
+        const percent = Math.min((currentValue / max) * 100, 100);
+
+        document.getElementById(barFilled).style.width = `${Math.max(0, percent - initialPercent)}%`;
+        document.getElementById(barText).textContent = `目前：${currentValue} / ${max}`;
+        document.getElementById(countdownId).textContent = `剩餘時間：${formatTime(remaining)}`;
+
+        if (remaining <= 0) {
+          clearInterval(timer);
+        }
+      };
+
+      update();
+      const timer = setInterval(update, 1000);
+    }
+
+    function calculateStamina() {
+      const max = parseInt(document.getElementById('maxStamina').value);
+      const current = parseInt(document.getElementById('currentStamina').value);
+      const rate = parseInt(document.getElementById('staminaRate').value);
+      calculate('stamina', max, current, rate, 'staminaResult', 'staminaCountdown', 'staminaFinishTime', 'staminaProgress', 'staminaInitial', 'staminaProgressText');
+    }
+
+    function calculateMorale() {
+      const max = parseInt(document.getElementById('maxMorale').value);
+      const current = parseInt(document.getElementById('currentMorale').value);
+      const rate = parseInt(document.getElementById('moraleRate').value);
+      calculate('morale', max, current, rate, 'moraleResult', 'moraleCountdown', 'moraleFinishTime', 'moraleProgress', 'moraleInitial', 'moraleProgressText');
+    }
+  </script>
+</body>
 </html>
